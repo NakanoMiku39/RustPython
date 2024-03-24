@@ -9,6 +9,7 @@ use crate::{
     },
     identifier,
     protocol::PyNumberMethods,
+    stdlib::warnings,
     types::{AsNumber, Comparable, Constructor, Hashable, PyComparisonOp, Representable},
     AsObject, Context, Py, PyObject, PyObjectRef, PyPayload, PyRef, PyResult, VirtualMachine,
 };
@@ -59,14 +60,31 @@ impl PyObjectRef {
         }
         if let Some(method) = vm.get_method(self.clone(), identifier!(vm, __complex__)) {
             let result = method?.call((), vm)?;
-            // TODO: returning strict subclasses of complex in __complex__ is deprecated
-            return match result.payload::<PyComplex>() {
-                Some(complex_obj) => Ok(Some((complex_obj.value, true))),
-                None => Err(vm.new_type_error(format!(
-                    "__complex__ returned non-complex (type '{}')",
-                    result.class().name()
-                ))),
-            };
+
+            let ret_class = result.class().to_owned();
+            if let Some(ret) = result.downcast_ref::<PyComplex>() {
+                warnings::warn(
+                    vm.ctx.exceptions.deprecation_warning,
+                    format!(
+                        "__complex__ returned non-complex (type {}).  \
+                    The ability to return an instance of a strict subclass of complex \
+                    is deprecated, and may be removed in a future version of Python.",
+                        ret_class
+                    ),
+                    1,
+                    vm,
+                )?;
+
+                return Ok(Some((ret.value, true)));
+            } else {
+                return match result.payload::<PyComplex>() {
+                    Some(complex_obj) => Ok(Some((complex_obj.value, true))),
+                    None => Err(vm.new_type_error(format!(
+                        "__complex__ returned non-complex (type '{}')",
+                        result.class().name()
+                    ))),
+                };
+            }
         }
         // `complex` does not have a `__complex__` by default, so subclasses might not either,
         // use the actual stored value in this case
@@ -103,7 +121,7 @@ fn inner_div(v1: Complex64, v2: Complex64, vm: &VirtualMachine) -> PyResult<Comp
 
 fn inner_pow(v1: Complex64, v2: Complex64, vm: &VirtualMachine) -> PyResult<Complex64> {
     if v1.is_zero() {
-        return if v2.im != 0.0 {
+        return if v2.re < 0.0 || v2.im != 0.0 {
             let msg = format!("{v1} cannot be raised to a negative or complex power");
             Err(vm.new_zero_division_error(msg))
         } else if v2.is_zero() {

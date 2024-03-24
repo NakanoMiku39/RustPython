@@ -236,8 +236,6 @@ class ComplexTest(unittest.TestCase):
         for a, b in ZERO_DIVISION:
             self.assertRaises(TypeError, divmod, a, b)
 
-    # TODO: RUSTPYTHON
-    @unittest.expectedFailure
     def test_pow(self):
         self.assertAlmostEqual(pow(1+1j, 0+0j), 1.0)
         self.assertAlmostEqual(pow(0+0j, 2+0j), 0.0)
@@ -342,8 +340,6 @@ class ComplexTest(unittest.TestCase):
     def test_conjugate(self):
         self.assertClose(complex(5.3, 9.8).conjugate(), 5.3-9.8j)
 
-    # TODO: RUSTPYTHON
-    @unittest.expectedFailure
     def test_constructor(self):
         class NS:
             def __init__(self, value): self.value = value

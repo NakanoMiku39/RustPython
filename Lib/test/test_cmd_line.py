@@ -278,13 +278,11 @@ class CmdLineTest(unittest.TestCase):
         code = 'import sys, os; s=os.fsencode(sys.argv[1]); print(ascii(s))'
 
         # TODO: RUSTPYTHON
-        @unittest.expectedFailure
         def run_default(arg):
             cmd = [sys.executable, '-c', code, arg]
             return subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
 
         # TODO: RUSTPYTHON
-        @unittest.expectedFailure
         def run_c_locale(arg):
             cmd = [sys.executable, '-c', code, arg]
             env = dict(os.environ)
@@ -293,7 +291,6 @@ class CmdLineTest(unittest.TestCase):
                                   text=True, env=env)
 
         # TODO: RUSTPYTHON
-        @unittest.expectedFailure
         def run_utf8_mode(arg):
             cmd = [sys.executable, '-X', 'utf8', '-c', code, arg]
             return subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
@@ -411,7 +408,8 @@ class CmdLineTest(unittest.TestCase):
             path = ":".join(sys.path)
             path = path.encode("ascii", "backslashreplace")
             sys.stdout.buffer.write(path)"""
-        rc1, out1, err1 = assert_python_ok('-c', code, PYTHONPATH="")
+        # TODO: RUSTPYTHON we must unset RUSTPYTHONPATH as well
+        rc1, out1, err1 = assert_python_ok('-c', code, PYTHONPATH="", RUSTPYTHONPATH="")
         rc2, out2, err2 = assert_python_ok('-c', code, __isolated=False)
         # regarding to Posix specification, outputs should be equal
         # for empty and unset PYTHONPATH
